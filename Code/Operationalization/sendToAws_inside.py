@@ -1,21 +1,22 @@
+from multiprocessing import connection
 from awscrt import io, mqtt, auth, http
 from awsiot import mqtt_connection_builder
 from csv import reader
 from time import sleep
 import json
 
-url_inside = '../../Data/Processed/inside.csv'
+url_inside = '/app/Data/Processed/inside.csv'
 
-ENDPOINT = "endpoint do aws"
-CLIENT_ID = "nome da thing"
+ENDPOINT = "ar95nzm5vzl5q-ats.iot.us-east-1.amazonaws.com"
+CLIENT_ID = "Sensor_inside"
 # PASTA DOS ARQUIVOS AWS DEVEM ESTAR NA PASTA DO PROJETO
-PATH_TO_CERTIFICATE = "certificates/certificado_aws"
+PATH_TO_CERTIFICATE = "/app/Code/Operationalization/certificates/Sensor_inside.cert.pem"
 # PASTA DOS ARQUIVOS AWS DEVEM ESTAR NA PASTA DO PROJETO
-PATH_TO_PRIVATE_KEY = "certificates/chave_aws"
+PATH_TO_PRIVATE_KEY = "/app/Code/Operationalization/certificates/Sensor_inside.private.key"
 # PASTA DOS ARQUIVOS AWS DEVEM ESTAR NA PASTA DO PROJETO
-PATH_TO_AMAZON_ROOT_CA_1 = "certificates/root-CA.crt"
+PATH_TO_AMAZON_ROOT_CA_1 = "/app/Code/Operationalization/certificates/root-CA-inside.crt"
 
-TOPIC = "thing/dado_desejado"
+TOPIC = "Sensor_inside/temperature"
 
 
 def connect_to_aws():
@@ -34,30 +35,26 @@ def connect_to_aws():
     )
     connect_future = mqtt_connection.connect()
     connect_future.result()
+    return mqtt_connection, connect_future
 
-    return connect_future
 
-
-def read_cvs():
+if __name__ == "__main__":
+    mqtt_connection, connection = connect_to_aws()
     with open(url_inside, 'r') as read_obj:
         csv_reader = reader(read_obj)
         header = next(csv_reader)
         if header != None:
             for row in csv_reader:
                 print(int(row[3]))
-                content = int(row[3])
-                sleep(1)
-                return content
-        return 'Erro'
-
-
-if __name__ == "__main__":
-    while True:
-        mqtt_connection = connect_to_aws()
-        content = read_cvs()
-        message = {"topic": content}
-        mqtt_connection.publish(topic=TOPIC,
-                                payload=json.dumps(message),
-                                qos=1)
-        disconnect_future = mqtt_connection.disconnect()
-        disconnect_future.result
+                content_date = row[0]
+                content_temp = int(row[3])
+                message = {
+                    "noted_date": content_date,
+                    "temperature_inside": content_temp
+                }
+                mqtt_connection.publish(topic=TOPIC,
+                                        payload=json.dumps(message),
+                                        qos=mqtt.QoS.AT_LEAST_ONCE)
+                sleep(.1)
+    disconnect_future = mqtt_connection.disconnect()
+    disconnect_future.result
